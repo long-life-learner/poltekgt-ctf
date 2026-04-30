@@ -21,10 +21,7 @@
         </div>
         <h1>Stored XSS — Buku Tamu Berbahaya</h1>
         <p class="challenge-desc-full">Sistem buku tamu menyimpan komentar ke database dan menampilkannya tanpa filter. Injeksikan payload XSS yang tersimpan — setiap orang yang membuka halaman akan menjalankan kode kamu!</p>
-        <details class="hint-box">
-          <summary>💡 Tampilkan Hint</summary>
-          <p>Kirim payload ini sebagai komentar:<br><code>&lt;img src=x onerror=alert(document.getElementById('flag-stored').innerText)&gt;</code><br>Setelah reload, script akan otomatis dieksekusi!</p>
-        </details>
+
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
           <a href="/vuln/xss-2" target="_blank" class="open-challenge-btn">🔗 Buka Buku Tamu</a>
           <a href="/tutorial.html" class="open-challenge-btn" style="background:var(--bg3);color:var(--text)">📚 Tutorial</a>

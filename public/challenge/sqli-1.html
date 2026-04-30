@@ -21,12 +21,7 @@
         </div>
         <h1>SQL Injection — Login Bypass</h1>
         <p class="challenge-desc-full">Form login di bawah menggunakan query SQL yang rentan. Login sebagai <strong>admin</strong> tanpa mengetahui passwordnya! Flag akan muncul ketika kamu berhasil masuk sebagai admin.</p>
-        <details class="hint-box">
-          <summary>💡 Tampilkan Hint</summary>
-          <p>Query yang digunakan: <code>SELECT * FROM users WHERE username='INPUT' AND password='INPUT'</code><br><br>
-          Payload: Username = <code>admin'--</code> (password bebas)<br>
-          Tanda <code>--</code> adalah komentar SQL yang akan mengabaikan pengecekan password!</p>
-        </details>
+
       </div>
 
       <!-- Inline Vulnerable Login Form -->

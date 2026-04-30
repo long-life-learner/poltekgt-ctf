@@ -21,12 +21,7 @@
         </div>
         <h1>XSS + Cookie Stealing — Curi Token Rahasia</h1>
         <p class="challenge-desc-full">Sebuah portal nilai menyimpan informasi rahasia dalam cookie browser. Cookie ini tidak memiliki atribut HttpOnly, artinya JavaScript bisa membacanya. Gunakan XSS untuk mencuri cookie dan temukan flag!</p>
-        <details class="hint-box">
-          <summary>💡 Tampilkan Hint</summary>
-          <p>Cookie bernama <code>secret_flag</code> berisi flag. Gunakan payload:<br>
-          <code>&lt;img src=x onerror=alert(document.cookie)&gt;</code><br>
-          Buka halaman rentan dulu agar cookie di-set oleh server.</p>
-        </details>
+
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
           <a href="/vuln/xss-3" target="_blank" class="open-challenge-btn">🔗 Buka Portal Nilai</a>
           <a href="/tutorial.html" class="open-challenge-btn" style="background:var(--bg3);color:var(--text)">📚 Tutorial</a>

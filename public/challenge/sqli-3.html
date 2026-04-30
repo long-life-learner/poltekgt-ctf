@@ -21,14 +21,7 @@
         </div>
         <h1>Blind SQL Injection — Sabar & Teliti</h1>
         <p class="challenge-desc-full">Tidak ada data yang ditampilkan langsung — server hanya menjawab "✅ Data Ditemukan" atau "❌ Data Tidak Ditemukan". Gunakan kondisi boolean untuk mengekstrak flag karakter per karakter!</p>
-        <details class="hint-box">
-          <summary>💡 Tampilkan Hint</summary>
-          <p>Query server: <code>SELECT secret_value FROM ctf_secrets WHERE secret_name='flag_sqli3' AND [INPUT]</code><br><br>
-          Untuk cek karakter pertama:<br>
-          <code>1=1 AND SUBSTRING(secret_value,1,1)='C'</code> → Ditemukan ✅<br>
-          <code>1=1 AND SUBSTRING(secret_value,1,1)='X'</code> → Tidak Ditemukan ❌<br><br>
-          Flag format: CTF{...} — karakter 1-4 pasti C,T,F,{</p>
-        </details>
+
       </div>
 
       <div class="tutorial-card mb-4" style="background:var(--bg2)">

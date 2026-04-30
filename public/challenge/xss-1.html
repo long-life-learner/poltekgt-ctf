@@ -25,10 +25,7 @@
         </div>
         <h1>Reflected XSS — Mesin Pencari Berbahaya</h1>
         <p class="challenge-desc-full">Sebuah halaman pencarian menampilkan input pengguna langsung ke halaman tanpa sanitasi apapun. Eksploitasi celah ini untuk membaca flag yang tersembunyi!</p>
-        <details class="hint-box">
-          <summary>💡 Tampilkan Hint</summary>
-          <p>Flag ada di elemen dengan id="flag-secret". Gunakan payload:<br><code>&lt;img src=x onerror=alert(document.getElementById('flag-secret').innerText)&gt;</code></p>
-        </details>
+
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
           <a href="/vuln/xss-1" target="_blank" class="open-challenge-btn">🔗 Buka Halaman Rentan</a>
           <a href="/tutorial.html" class="open-challenge-btn" style="background:var(--bg3);color:var(--text)">📚 Lihat Tutorial</a>
