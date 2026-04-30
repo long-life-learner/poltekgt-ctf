@@ -9,6 +9,9 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Railway runs behind a proxy — required for express-rate-limit & secure cookies
+app.set('trust proxy', 1);
+
 if (!process.env.DATABASE_URL) {
   console.error('❌ DATABASE_URL environment variable is not set!');
   console.error('   Di Railway: tambahkan PostgreSQL plugin dan link ke service ini.');
@@ -42,140 +45,151 @@ const requireAdmin = (req, res, next) => req.session.admin ? next() : res.status
 async function initDB() {
   const c = await pool.connect();
   try {
-    await c.query(`
-      CREATE TABLE IF NOT EXISTS students (
-        id SERIAL PRIMARY KEY,
-        nim VARCHAR(20) UNIQUE NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS challenges (
-        id SERIAL PRIMARY KEY,
-        slug VARCHAR(50) UNIQUE NOT NULL,
-        title VARCHAR(100) NOT NULL,
-        category VARCHAR(20) NOT NULL,
-        difficulty VARCHAR(10) NOT NULL,
-        points INTEGER NOT NULL,
-        flag VARCHAR(100) NOT NULL,
-        description TEXT,
-        hint TEXT,
-        sort_order INTEGER DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS submissions (
-        id SERIAL PRIMARY KEY,
-        student_id INTEGER REFERENCES students(id),
-        challenge_id INTEGER REFERENCES challenges(id),
-        submitted_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(student_id, challenge_id)
-      );
-      CREATE TABLE IF NOT EXISTS ctf_guestbook (
-        id SERIAL PRIMARY KEY,
-        author VARCHAR(100),
-        content TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE TABLE IF NOT EXISTS ctf_products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100),
-        price VARCHAR(20),
-        category VARCHAR(50)
-      );
-      CREATE TABLE IF NOT EXISTS ctf_secrets (
-        id SERIAL PRIMARY KEY,
-        secret_name VARCHAR(100),
-        secret_value VARCHAR(255)
-      );
-      CREATE TABLE IF NOT EXISTS ctf_users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50),
-        password VARCHAR(50),
-        role VARCHAR(20),
-        note VARCHAR(255)
-      );
-    `);
+    // Create each table separately (pg does not support multiple statements in one query)
+    await c.query(`CREATE TABLE IF NOT EXISTS students (
+      id SERIAL PRIMARY KEY,
+      nim VARCHAR(20) UNIQUE NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS admins (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(50) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS challenges (
+      id SERIAL PRIMARY KEY,
+      slug VARCHAR(50) UNIQUE NOT NULL,
+      title VARCHAR(100) NOT NULL,
+      category VARCHAR(20) NOT NULL,
+      difficulty VARCHAR(10) NOT NULL,
+      points INTEGER NOT NULL,
+      flag VARCHAR(100) NOT NULL,
+      description TEXT,
+      hint TEXT,
+      sort_order INTEGER DEFAULT 0
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS submissions (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER REFERENCES students(id),
+      challenge_id INTEGER REFERENCES challenges(id),
+      submitted_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(student_id, challenge_id)
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS ctf_guestbook (
+      id SERIAL PRIMARY KEY,
+      author VARCHAR(100),
+      content TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS ctf_products (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100),
+      price VARCHAR(20),
+      category VARCHAR(50)
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS ctf_secrets (
+      id SERIAL PRIMARY KEY,
+      secret_name VARCHAR(100),
+      secret_value VARCHAR(255)
+    )`);
+
+    await c.query(`CREATE TABLE IF NOT EXISTS ctf_users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(50),
+      password VARCHAR(50),
+      role VARCHAR(20),
+      note VARCHAR(255)
+    )`);
+
+    // Seed admin account
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'dosenctf2024';
+    const adminHash = await bcrypt.hash(adminPass, 10);
+    await c.query(
+      `INSERT INTO admins (username, password) VALUES ($1, $2) ON CONFLICT (username) DO NOTHING`,
+      [adminUser, adminHash]
+    );
 
     // Seed challenges
     const { rows: ch } = await c.query('SELECT COUNT(*) FROM challenges');
     if (parseInt(ch[0].count) === 0) {
-      await c.query(`
-        INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
-        ('xss-1','Reflected XSS - Mesin Pencari Berbahaya','xss','Easy',100,'CTF{r3fl3ct3d_xss_b3rh4s1l}',
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['xss-1','Reflected XSS - Mesin Pencari Berbahaya','xss','Easy',100,'CTF{r3fl3ct3d_xss_b3rh4s1l}',
          'Sebuah halaman pencarian menampilkan input pengguna langsung ke halaman tanpa sanitasi. Temukan flag tersembunyi menggunakan XSS!',
-         'Coba payload: <img src=x onerror=alert(document.getElementById("flag-secret").innerText)>',1),
-        ('xss-2','Stored XSS - Buku Tamu Berbahaya','xss','Medium',200,'CTF{st0r3d_xss_p3rs1st3n}',
+         'Coba payload: <img src=x onerror=alert(document.getElementById("flag-secret").innerText)>',1]);
+
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['xss-2','Stored XSS - Buku Tamu Berbahaya','xss','Medium',200,'CTF{st0r3d_xss_p3rs1st3n}',
          'Form komentar menyimpan input ke database dan menampilkannya tanpa filter. Injeksikan XSS yang tersimpan!',
-         'Payload yang kamu kirim akan dieksekusi setiap halaman dimuat. Flag ada di elemen tersembunyi.',2),
-        ('xss-3','XSS + Cookie Stealing','xss','Hard',300,'CTF{c00k13_h1j4ck_suc3ss}',
+         'Payload yang kamu kirim akan dieksekusi setiap halaman dimuat. Flag ada di elemen tersembunyi.',2]);
+
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['xss-3','XSS + Cookie Stealing','xss','Hard',300,'CTF{c00k13_h1j4ck_suc3ss}',
          'Sebuah halaman menyimpan informasi rahasia di cookie. Gunakan XSS untuk membaca cookie tersebut!',
-         'Cookie "secret_flag" tidak ber-HttpOnly. Gunakan: <img src=x onerror=alert(document.cookie)>',3),
-        ('sqli-1','SQL Injection - Login Bypass','sqli','Easy',100,'CTF{sql1_byp4ss_l0g1n}',
+         'Cookie "secret_flag" tidak ber-HttpOnly. Gunakan: <img src=x onerror=alert(document.cookie)>',3]);
+
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['sqli-1','SQL Injection - Login Bypass','sqli','Easy',100,'CTF{sql1_byp4ss_l0g1n}',
          'Form login menggunakan query SQL yang rentan. Login sebagai admin tanpa mengetahui password!',
-         'Query: SELECT * FROM users WHERE username=''input'' AND password=''input''. Coba: admin''--',4),
-        ('sqli-2','SQL Injection - UNION Attack','sqli','Medium',200,'CTF{un10n_s3l3ct_p0w3r}',
+         "Query: SELECT * FROM users WHERE username='input' AND password='input'. Coba: admin'--",4]);
+
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['sqli-2','SQL Injection - UNION Attack','sqli','Medium',200,'CTF{un10n_s3l3ct_p0w3r}',
          'Fitur pencarian produk rentan terhadap UNION-based SQLi. Ekstrak flag dari tabel tersembunyi!',
-         'Coba: '' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name=''flag_sqli2''--',5),
-        ('sqli-3','Blind SQL Injection','sqli','Hard',300,'CTF{bl1nd_sqli_s4bar_ya}',
+         "Coba: ' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name='flag_sqli2'--",5]);
+
+      await c.query(`INSERT INTO challenges (slug,title,category,difficulty,points,flag,description,hint,sort_order) VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        ['sqli-3','Blind SQL Injection','sqli','Hard',300,'CTF{bl1nd_sqli_s4bar_ya}',
          'Tidak ada data tampil langsung, hanya "Ditemukan" atau "Tidak Ditemukan". Ekstrak flag karakter per karakter!',
-         'Boolean-based: '' AND SUBSTRING(secret_value,1,1)=''C''-- dari ctf_secrets WHERE secret_name=''flag_sqli3''',6)
-      `);
+         "Boolean-based: ' AND SUBSTRING(secret_value,1,1)='C'-- dari ctf_secrets WHERE secret_name='flag_sqli3'",6]);
     }
 
-    // Seed CTF game data
+    // Seed guestbook
     const { rows: gb } = await c.query('SELECT COUNT(*) FROM ctf_guestbook');
     if (parseInt(gb[0].count) === 0) {
-      await c.query(`
-        INSERT INTO ctf_guestbook (author, content) VALUES
-        ('Admin','Selamat datang di Buku Tamu Poltek GT!'),
-        ('System','<span id="flag-stored" style="display:none">CTF{st0r3d_xss_p3rs1st3n}</span>Sistem berjalan normal.'),
-        ('Mahasiswa','Website ini keren sekali!')
-      `);
+      await c.query(`INSERT INTO ctf_guestbook (author, content) VALUES ($1,$2)`, ['Admin','Selamat datang di Buku Tamu Poltek GT!']);
+      await c.query(`INSERT INTO ctf_guestbook (author, content) VALUES ($1,$2)`, ['System','<span id="flag-stored" style="display:none">CTF{st0r3d_xss_p3rs1st3n}</span>Sistem berjalan normal.']);
+      await c.query(`INSERT INTO ctf_guestbook (author, content) VALUES ($1,$2)`, ['Mahasiswa','Website ini keren sekali!']);
     }
 
+    // Seed products
     const { rows: pr } = await c.query('SELECT COUNT(*) FROM ctf_products');
     if (parseInt(pr[0].count) === 0) {
-      await c.query(`
-        INSERT INTO ctf_products (name, price, category) VALUES
-        ('Laptop Gaming ROG','15000000','Elektronik'),
-        ('Mouse Wireless Logitech','250000','Aksesoris'),
-        ('Keyboard Mechanical','800000','Aksesoris'),
-        ('Monitor 4K','5000000','Elektronik')
-      `);
+      await c.query(`INSERT INTO ctf_products (name,price,category) VALUES ($1,$2,$3)`,['Laptop Gaming ROG','15000000','Elektronik']);
+      await c.query(`INSERT INTO ctf_products (name,price,category) VALUES ($1,$2,$3)`,['Mouse Wireless Logitech','250000','Aksesoris']);
+      await c.query(`INSERT INTO ctf_products (name,price,category) VALUES ($1,$2,$3)`,['Keyboard Mechanical','800000','Aksesoris']);
+      await c.query(`INSERT INTO ctf_products (name,price,category) VALUES ($1,$2,$3)`,['Monitor 4K','5000000','Elektronik']);
     }
 
+    // Seed secrets (SQLi flags)
     const { rows: sc } = await c.query('SELECT COUNT(*) FROM ctf_secrets');
     if (parseInt(sc[0].count) === 0) {
-      await c.query(`
-        INSERT INTO ctf_secrets (secret_name, secret_value) VALUES
-        ('flag_sqli2','CTF{un10n_s3l3ct_p0w3r}'),
-        ('flag_sqli3','CTF{bl1nd_sqli_s4bar_ya}'),
-        ('kunci_rahasia','poltek-gt-2024')
-      `);
+      await c.query(`INSERT INTO ctf_secrets (secret_name,secret_value) VALUES ($1,$2)`,['flag_sqli2','CTF{un10n_s3l3ct_p0w3r}']);
+      await c.query(`INSERT INTO ctf_secrets (secret_name,secret_value) VALUES ($1,$2)`,['flag_sqli3','CTF{bl1nd_sqli_s4bar_ya}']);
+      await c.query(`INSERT INTO ctf_secrets (secret_name,secret_value) VALUES ($1,$2)`,['kunci_rahasia','poltek-gt-2024']);
     }
 
+    // Seed CTF login users (for SQLi challenge 1)
     const { rows: cu } = await c.query('SELECT COUNT(*) FROM ctf_users');
     if (parseInt(cu[0].count) === 0) {
-      await c.query(`
-        INSERT INTO ctf_users (username, password, role, note) VALUES
-        ('admin','s3cr3t_p4ss','admin','CTF{sql1_byp4ss_l0g1n}'),
-        ('user1','password123','user','akun biasa'),
-        ('user2','qwerty','user','akun biasa')
-      `);
+      await c.query(`INSERT INTO ctf_users (username,password,role,note) VALUES ($1,$2,$3,$4)`,['admin','s3cr3t_p4ss','admin','CTF{sql1_byp4ss_l0g1n}']);
+      await c.query(`INSERT INTO ctf_users (username,password,role,note) VALUES ($1,$2,$3,$4)`,['user1','password123','user','akun biasa']);
+      await c.query(`INSERT INTO ctf_users (username,password,role,note) VALUES ($1,$2,$3,$4)`,['user2','qwerty','user','akun biasa']);
     }
-
-    // Create admin if not exists
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'dosenctf2024';
-    const adminHash = await bcrypt.hash(adminPass, 10);
-    await c.query(`
-      CREATE TABLE IF NOT EXISTS admins (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL
-      );
-      INSERT INTO admins (username, password) VALUES ($1, $2)
-      ON CONFLICT (username) DO NOTHING;
-    `, [adminUser, adminHash]);
 
     console.log('✅ Database initialized');
   } finally {
