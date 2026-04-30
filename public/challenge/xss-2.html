@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XSS #2 — Stored XSS</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links"><a href="/dashboard.html" class="nav-link">← Dashboard</a></div>
+    <div class="nav-user"><span class="user-badge" id="user-nim">...</span></div>
+  </nav>
+  <div class="main-content">
+    <div class="challenge-page">
+      <div class="challenge-header">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <span class="badge-diff diff-medium">Medium</span>
+          <span class="challenge-category cat-xss">XSS · Challenge #2</span>
+          <span class="badge-points">⚡ 200 pts</span>
+        </div>
+        <h1>Stored XSS — Buku Tamu Berbahaya</h1>
+        <p class="challenge-desc-full">Sistem buku tamu menyimpan komentar ke database dan menampilkannya tanpa filter. Injeksikan payload XSS yang tersimpan — setiap orang yang membuka halaman akan menjalankan kode kamu!</p>
+        <details class="hint-box">
+          <summary>💡 Tampilkan Hint</summary>
+          <p>Kirim payload ini sebagai komentar:<br><code>&lt;img src=x onerror=alert(document.getElementById('flag-stored').innerText)&gt;</code><br>Setelah reload, script akan otomatis dieksekusi!</p>
+        </details>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+          <a href="/vuln/xss-2" target="_blank" class="open-challenge-btn">🔗 Buka Buku Tamu</a>
+          <a href="/tutorial.html" class="open-challenge-btn" style="background:var(--bg3);color:var(--text)">📚 Tutorial</a>
+        </div>
+      </div>
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>🎯 Cara Mengerjakan</h3>
+        <p>1. Buka halaman Buku Tamu di tab baru</p>
+        <p>2. Isi kolom <strong>Komentar</strong> dengan payload XSS</p>
+        <p>3. Klik "Kirim Komentar" — payload akan tersimpan di database</p>
+        <p>4. Halaman akan reload dan payload kamu akan dieksekusi (karena tidak ada sanitasi!)</p>
+        <p>5. Alert box akan menampilkan flag tersembunyi</p>
+        <div class="code-block" style="margin-top:12px">
+          <span class="comment">// Payload untuk Stored XSS:</span><br>
+          &lt;img src=x onerror=<span class="highlight">alert(document.getElementById('flag-stored').innerText)</span>&gt;
+        </div>
+      </div>
+      <div class="flag-submit-card">
+        <h3>🚩 Submit Flag</h3>
+        <div class="flag-input-wrap">
+          <input type="text" class="flag-input" id="flag-input" placeholder="CTF{...}">
+          <button class="btn-submit-flag" onclick="submitFlag()">Submit</button>
+        </div>
+        <div class="alert" id="flag-alert" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me || me.role !== 'student') return location.href = '/';
+      document.getElementById('user-nim').textContent = me.user.nim;
+    }
+    async function submitFlag() {
+      const flag = document.getElementById('flag-input').value.trim();
+      const alertEl = document.getElementById('flag-alert');
+      if (!flag) return;
+      const r = await fetch('/api/challenges/submit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'xss-2',flag})});
+      const d = await r.json();
+      alertEl.className = 'alert show ' + (d.success ? 'alert-success' : 'alert-error');
+      alertEl.textContent = d.success ? `🎉 ${d.message}` : `❌ ${d.error}`;
+      if (d.success) setTimeout(()=>location.href='/dashboard.html', 2000);
+    }
+    init();
+  </script>
+</body>
+</html>

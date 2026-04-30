@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Poltek GT CTF Lab</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="/tutorial.html" class="nav-link">Tutorial</a>
+      <a href="/scoreboard.html" class="nav-link">Scoreboard</a>
+    </div>
+    <div class="nav-user">
+      <span class="user-badge" id="user-nim">...</span>
+      <button class="btn-logout" onclick="logout()">Keluar</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <!-- Welcome -->
+    <div style="margin-bottom:28px">
+      <h2 style="font-size:1.5rem;margin-bottom:4px">Selamat datang, <span id="user-name" class="text-green">...</span> 👋</h2>
+      <p class="text-dim">Selesaikan semua challenge untuk melatih skill cyber security kamu!</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-points">0</div>
+        <div class="stat-label">Total Poin</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-solved">0/6</div>
+        <div class="stat-label">Challenge Selesai</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-rank">#-</div>
+        <div class="stat-label">Peringkat</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-pct">0%</div>
+        <div class="stat-label">Persentase</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="mb-6">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span class="text-dim" style="font-size:0.875rem">Progress Keseluruhan</span>
+        <span class="text-green mono" id="prog-text">0 / 1200 poin</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="prog-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Tutorial Alert -->
+    <div class="info-box mb-6" id="tutorial-alert">
+      💡 <span>Baru pertama kali? Baca <a href="/tutorial.html" style="color:var(--cyan);font-weight:600">Tutorial</a> terlebih dahulu sebelum mengerjakan challenge!</span>
+    </div>
+
+    <!-- XSS Challenges -->
+    <div class="section-header mb-4">
+      <h3 class="section-title"><span style="color:var(--red)">XSS</span> Cross-Site Scripting</h3>
+    </div>
+    <div class="challenges-grid mb-6" id="grid-xss"></div>
+
+    <!-- SQLi Challenges -->
+    <div class="section-header mb-4">
+      <h3 class="section-title"><span style="color:var(--cyan)">SQLi</span> SQL Injection</h3>
+    </div>
+    <div class="challenges-grid" id="grid-sqli"></div>
+  </div>
+
+  <script>
+    let challenges = [], userData = {}, scoreboard = [];
+
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me || me.role !== 'student') return location.href = '/';
+      userData = me.user;
+      document.getElementById('user-nim').textContent = me.user.nim;
+      document.getElementById('user-name').textContent = me.user.name;
+
+      [challenges, scoreboard] = await Promise.all([
+        fetch('/api/challenges').then(r=>r.json()),
+        fetch('/api/scoreboard').then(r=>r.json())
+      ]);
+
+      renderStats();
+      renderChallenges();
+    }
+
+    function renderStats() {
+      const solved = challenges.filter(c=>c.solved);
+      const points = solved.reduce((s,c)=>s+c.points, 0);
+      document.getElementById('stat-points').textContent = points;
+      document.getElementById('stat-solved').textContent = `${solved.length}/6`;
+      document.getElementById('stat-pct').textContent = Math.round(points/1200*100)+'%';
+      document.getElementById('prog-text').textContent = `${points} / 1200 poin`;
+      document.getElementById('prog-bar').style.width = (points/1200*100)+'%';
+
+      const rank = scoreboard.findIndex(s=>s.nim===userData.nim)+1;
+      document.getElementById('stat-rank').textContent = rank > 0 ? '#'+rank : '#-';
+    }
+
+    function renderChallenges() {
+      const xss = challenges.filter(c=>c.category==='xss');
+      const sqli = challenges.filter(c=>c.category==='sqli');
+      document.getElementById('grid-xss').innerHTML = xss.map(cardHTML).join('');
+      document.getElementById('grid-sqli').innerHTML = sqli.map(cardHTML).join('');
+    }
+
+    function cardHTML(c) {
+      const diffClass = c.difficulty.toLowerCase();
+      return `<a href="/challenge/${c.slug}.html" class="challenge-card${c.solved?' solved':''}">
+        <div class="challenge-category cat-${c.category}">${c.category.toUpperCase()} · Challenge</div>
+        <div class="challenge-title">${c.title}</div>
+        <div class="challenge-desc">${c.description}</div>
+        <div class="challenge-meta">
+          <span class="badge-diff diff-${diffClass}">${c.difficulty}</span>
+          <span class="badge-points">⚡ ${c.points} pts</span>
+        </div>
+      </a>`;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', {method:'POST'});
+      location.href = '/';
+    }
+
+    init();
+  </script>
+</body>
+</html>

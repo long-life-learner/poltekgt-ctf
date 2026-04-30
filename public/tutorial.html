@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial — Poltek GT CTF Lab</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/tutorial.html" class="nav-link active">Tutorial</a>
+      <a href="/scoreboard.html" class="nav-link">Scoreboard</a>
+    </div>
+    <div class="nav-user">
+      <span class="user-badge" id="user-nim">...</span>
+      <button class="btn-logout" onclick="logout()">Keluar</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="tutorial-container">
+      <div style="margin-bottom:24px">
+        <h1 style="font-size:1.6rem;margin-bottom:8px">📚 Tutorial Cyber Security</h1>
+        <p class="text-dim">Pelajari dasar-dasar XSS dan SQL Injection sebelum mengerjakan challenge.</p>
+      </div>
+
+      <div class="tutorial-nav">
+        <button class="tutorial-tab active" onclick="showSection('intro')">🏠 Pendahuluan</button>
+        <button class="tutorial-tab" onclick="showSection('xss')">🔴 XSS</button>
+        <button class="tutorial-tab" onclick="showSection('sqli')">🔵 SQL Injection</button>
+        <button class="tutorial-tab" onclick="showSection('tools')">🛠️ Tools & Tips</button>
+      </div>
+
+      <!-- INTRO -->
+      <div class="tutorial-section active" id="sec-intro">
+        <div class="tutorial-card">
+          <h3>🎯 Apa itu CTF (Capture The Flag)?</h3>
+          <p>CTF adalah kompetisi keamanan siber di mana peserta mencari <strong>"flag"</strong> — sebuah string rahasia yang tersembunyi dalam sistem yang sengaja dibuat rentan.</p>
+          <p>Di platform ini, setiap challenge memiliki satu flag dengan format: <code class="mono" style="background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--green)">CTF{...}</code></p>
+          <div class="success-box">✅ Tujuan: Temukan flag, lalu submit di halaman challenge untuk mendapatkan poin!</div>
+        </div>
+        <div class="tutorial-card">
+          <h3>📋 Aturan Platform</h3>
+          <p>• Hanya boleh mengeksploitasi halaman challenge yang sudah disediakan (<code class="mono" style="font-size:0.85rem">/vuln/...</code>)</p>
+          <p>• Dilarang menyerang infrastruktur server atau database utama</p>
+          <p>• Dilarang berbagi flag dengan mahasiswa lain — kerjakan sendiri!</p>
+          <p>• Boleh berdiskusi tentang konsep dan teknik, tapi tidak boleh memberi flag langsung</p>
+        </div>
+        <div class="tutorial-card">
+          <h3>🗺️ Roadmap Belajar</h3>
+          <p>Disarankan mengerjakan challenge secara berurutan dari Easy ke Hard:</p>
+          <div style="margin-top:12px">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+              <span style="background:rgba(0,255,136,0.15);color:var(--green);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:600">Easy</span>
+              <span class="text-dim">XSS #1 Reflected XSS → SQLi #1 Login Bypass</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+              <span style="background:rgba(255,211,42,0.15);color:var(--yellow);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:600">Medium</span>
+              <span class="text-dim">XSS #2 Stored XSS → SQLi #2 UNION Attack</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="background:rgba(255,71,87,0.15);color:var(--red);padding:3px 10px;border-radius:20px;font-size:0.8rem;font-weight:600">Hard</span>
+              <span class="text-dim">XSS #3 Cookie Stealing → SQLi #3 Blind SQLi</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- XSS -->
+      <div class="tutorial-section" id="sec-xss">
+        <div class="tutorial-card">
+          <h3>🔴 Apa itu Cross-Site Scripting (XSS)?</h3>
+          <p>XSS adalah serangan di mana penyerang menyuntikkan kode JavaScript berbahaya ke dalam halaman web. Kode ini kemudian dieksekusi oleh browser korban.</p>
+          <div class="warn-box">⚠️ XSS terjadi ketika aplikasi web menampilkan input pengguna TANPA melakukan sanitasi atau escaping terlebih dahulu.</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 1: Reflected XSS</h3>
+          <p>Input langsung direfleksikan (ditampilkan kembali) ke halaman. Biasa terjadi di form pencarian atau parameter URL.</p>
+          <p><strong>Contoh kode RENTAN:</strong></p>
+          <div class="code-block">
+            <span class="comment">// ❌ BERBAHAYA - Input langsung ke HTML!</span><br>
+            <span class="keyword">const</span> query = req.query.q;<br>
+            res.send(<span class="string">`&lt;p&gt;Hasil: <span class="highlight">${query}</span>&lt;/p&gt;`</span>);
+          </div>
+          <p><strong>Payload yang bisa digunakan:</strong></p>
+          <div class="code-block">
+            <span class="comment">// Payload XSS klasik</span><br>
+            &lt;<span class="keyword">script</span>&gt;alert(<span class="string">'XSS'</span>)&lt;/<span class="keyword">script</span>&gt;<br><br>
+            <span class="comment">// Jika script tag diblokir, gunakan event handler</span><br>
+            &lt;<span class="keyword">img</span> src=x onerror=<span class="highlight">alert(document.cookie)</span>&gt;<br><br>
+            <span class="comment">// Membaca elemen tersembunyi</span><br>
+            &lt;<span class="keyword">img</span> src=x onerror=<span class="highlight">alert(document.getElementById('flag-secret').innerText)</span>&gt;
+          </div>
+          <div class="info-box">💡 Di challenge XSS #1, flag tersembunyi di elemen dengan <code>id="flag-secret"</code>. Gunakan XSS untuk membacanya!</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 2: Stored XSS</h3>
+          <p>Payload XSS disimpan ke database dan dieksekusi setiap kali halaman dimuat. Lebih berbahaya karena tidak perlu interaksi khusus dari korban.</p>
+          <p><strong>Contoh skenario: Form Komentar</strong></p>
+          <div class="code-block">
+            <span class="comment">// Penyerang mengisi form komentar dengan:</span><br>
+            Nama: <span class="string">Hacker</span><br>
+            Komentar: <span class="highlight">&lt;script&gt;document.cookie&lt;/script&gt;</span><br><br>
+            <span class="comment">// Setiap pengunjung yang membuka halaman</span><br>
+            <span class="comment">// akan menjalankan script tersebut!</span>
+          </div>
+          <div class="info-box">💡 Di challenge XSS #2, kirim payload XSS sebagai komentar. Flag ada di elemen tersembunyi di halaman buku tamu.</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 3: Cookie Stealing via XSS</h3>
+          <p>Cookie yang tidak memiliki atribut <code>HttpOnly</code> bisa dibaca oleh JavaScript. Ini sangat berbahaya karena cookie sering menyimpan token sesi.</p>
+          <div class="code-block">
+            <span class="comment">// Membaca semua cookie dengan JavaScript</span><br>
+            alert(document.<span class="highlight">cookie</span>);<br><br>
+            <span class="comment">// Sebagai XSS payload:</span><br>
+            &lt;<span class="keyword">img</span> src=x onerror=<span class="highlight">alert(document.cookie)</span>&gt;
+          </div>
+          <div class="info-box">💡 Di challenge XSS #3, halaman menyimpan flag di cookie <code>secret_flag</code>. Gunakan XSS untuk membacanya!</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>🛡️ Cara Mencegah XSS</h3>
+          <div class="code-block">
+            <span class="comment">// ✅ AMAN - Selalu escape output HTML</span><br>
+            <span class="keyword">function</span> escapeHtml(str) {<br>
+            &nbsp;&nbsp;<span class="keyword">return</span> str.replace(<span class="string">/&amp;/g</span>,<span class="string">'&amp;amp;'</span>)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.replace(<span class="string">/&lt;/g</span>,<span class="string">'&amp;lt;'</span>)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.replace(<span class="string">/&gt;/g</span>,<span class="string">'&amp;gt;'</span>);<br>
+            }<br>
+            <span class="safe">res.send(`&lt;p&gt;Hasil: ${escapeHtml(query)}&lt;/p&gt;`);</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SQLi -->
+      <div class="tutorial-section" id="sec-sqli">
+        <div class="tutorial-card">
+          <h3>🔵 Apa itu SQL Injection?</h3>
+          <p>SQL Injection adalah serangan di mana penyerang menyuntikkan perintah SQL ke dalam input aplikasi, sehingga database menjalankan perintah yang tidak diinginkan.</p>
+          <div class="warn-box">⚠️ SQLi terjadi ketika input pengguna digabungkan langsung ke dalam query SQL tanpa menggunakan parameterized query.</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 1: Login Bypass</h3>
+          <p>Memanipulasi query login agar berhasil tanpa mengetahui password.</p>
+          <div class="code-block">
+            <span class="comment">// Query RENTAN:</span><br>
+            <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> users<br>
+            <span class="keyword">WHERE</span> username='<span class="highlight">INPUT</span>' <span class="keyword">AND</span> password='<span class="highlight">INPUT</span>'<br><br>
+            <span class="comment">// Jika username diisi: admin'--</span><br>
+            <span class="comment">// Query menjadi:</span><br>
+            <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> users<br>
+            <span class="keyword">WHERE</span> username='<span class="safe">admin'--</span>' <span class="keyword">AND</span> password='...'<br><br>
+            <span class="comment">// -- adalah komentar SQL, password DIABAIKAN!</span>
+          </div>
+          <div class="info-box">💡 Payload: <code>admin'--</code> di field username. Isi password dengan apapun.</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 2: UNION-based SQLi</h3>
+          <p>Menambahkan query UNION untuk mengambil data dari tabel lain.</p>
+          <div class="code-block">
+            <span class="comment">// Query asal:</span><br>
+            <span class="keyword">SELECT</span> id, name, price, category <span class="keyword">FROM</span> products<br>
+            <span class="keyword">WHERE</span> name <span class="keyword">LIKE</span> '%<span class="highlight">INPUT</span>%'<br><br>
+            <span class="comment">// Payload UNION (harus sama jumlah kolomnya: 4):</span><br>
+            <span class="highlight">' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name='flag_sqli2'--</span><br><br>
+            <span class="comment">// Query menjadi:</span><br>
+            <span class="keyword">SELECT</span> id, name, price, category <span class="keyword">FROM</span> products<br>
+            <span class="keyword">WHERE</span> name <span class="keyword">LIKE</span> '%%'<br>
+            <span class="keyword">UNION SELECT</span> 1,<span class="safe">secret_value</span>,3,4 <span class="keyword">FROM</span> ctf_secrets ...
+          </div>
+          <div class="info-box">💡 Perhatikan jumlah kolom harus sama. Coba <code>' UNION SELECT 1,2,3,4--</code> dulu untuk verifikasi.</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>📌 Tipe 3: Blind SQL Injection</h3>
+          <p>Tidak ada data yang ditampilkan. Kita hanya mendapat respons "benar" atau "salah" untuk menebak data satu karakter sekaligus.</p>
+          <div class="code-block">
+            <span class="comment">// Query hanya mengembalikan "Ada" atau "Tidak Ada"</span><br>
+            <span class="comment">// Kita gunakan kondisi boolean:</span><br><br>
+            <span class="comment">// Apakah karakter pertama flag adalah 'C'?</span><br>
+            <span class="highlight">' AND SUBSTRING(secret_value,1,1)='C'--</span><br><br>
+            <span class="comment">// Apakah karakter kedua adalah 'T'?</span><br>
+            <span class="highlight">' AND SUBSTRING(secret_value,2,1)='T'--</span><br><br>
+            <span class="comment">// Terus sampai flag lengkap terungkap!</span><br>
+            <span class="comment">// Parameter: (string, posisi, panjang)</span>
+          </div>
+          <div class="info-box">💡 Format flag selalu CTF{...}, jadi karakter 1-4 pasti C,T,F,{. Mulai dari karakter ke-5!</div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>🛡️ Cara Mencegah SQL Injection</h3>
+          <div class="code-block">
+            <span class="comment">// ❌ BERBAHAYA</span><br>
+            pool.query(<span class="string">`SELECT * FROM users WHERE username='<span class="highlight">${input}</span>'`</span>);<br><br>
+            <span class="comment">// ✅ AMAN - Gunakan Parameterized Query</span><br>
+            pool.query(<span class="string">'SELECT * FROM users WHERE username=$1'</span>, [<span class="safe">input</span>]);
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS -->
+      <div class="tutorial-section" id="sec-tools">
+        <div class="tutorial-card">
+          <h3>🛠️ Tools yang Dibutuhkan</h3>
+          <p>Semua challenge bisa diselesaikan hanya dengan browser! Berikut tools yang berguna:</p>
+          <div style="margin-top:12px;display:grid;gap:10px">
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+              <strong style="color:var(--cyan)">🌐 Browser Developer Tools (F12)</strong>
+              <p class="text-dim" style="font-size:0.875rem;margin-top:6px">Inspect elemen tersembunyi, lihat cookie, eksekusi JavaScript di Console.</p>
+            </div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+              <strong style="color:var(--cyan)">📝 Browser Console</strong>
+              <p class="text-dim" style="font-size:0.875rem;margin-top:6px">Jalankan JavaScript: <code>document.cookie</code>, <code>document.getElementById('id').textContent</code></p>
+            </div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+              <strong style="color:var(--cyan)">🔗 URL Bar</strong>
+              <p class="text-dim" style="font-size:0.875rem;margin-top:6px">Manipulasi parameter URL langsung: <code>/vuln/xss-1?q=&lt;payload&gt;</code></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tutorial-card">
+          <h3>💡 Tips Mengerjakan Challenge</h3>
+          <p>1. <strong>Baca deskripsi</strong> challenge dengan teliti</p>
+          <p>2. <strong>Gunakan hint</strong> yang tersedia (klik tombol "Tampilkan Hint")</p>
+          <p>3. <strong>Inspect source code</strong> halaman (Ctrl+U) untuk mencari clue</p>
+          <p>4. <strong>Cek Console browser</strong> (F12) untuk pesan error atau hidden info</p>
+          <p>5. <strong>Coba payload sederhana</strong> dulu, lalu modifikasi sesuai kebutuhan</p>
+          <div class="success-box" style="margin-top:16px">🎯 Siap? <a href="/dashboard.html" style="color:var(--green);font-weight:600">Mulai kerjakan challenge sekarang!</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me) return location.href = '/';
+      document.getElementById('user-nim').textContent = me.user.nim || me.user.username;
+    }
+    function showSection(id) {
+      document.querySelectorAll('.tutorial-section').forEach(s=>s.classList.remove('active'));
+      document.querySelectorAll('.tutorial-tab').forEach(t=>t.classList.remove('active'));
+      document.getElementById('sec-'+id).classList.add('active');
+      event.target.classList.add('active');
+    }
+    async function logout() {
+      await fetch('/api/auth/logout', {method:'POST'});
+      location.href = '/';
+    }
+    init();
+  </script>
+</body>
+</html>

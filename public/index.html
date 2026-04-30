@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poltek GT CTF Lab — Login</title>
+  <meta name="description" content="Platform CTF untuk mahasiswa Poltek GT mata kuliah Pengenalan Cyber Security">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+  <canvas id="matrix-canvas"></canvas>
+
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-icon">🛡️</span>
+      <h1>POLTEK GT CTF LAB</h1>
+      <p>Pengenalan Cyber Security · XSS & SQL Injection</p>
+    </div>
+
+    <div class="tab-switcher">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Login</button>
+      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Daftar</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="form-login">
+      <div class="form-group">
+        <label for="login-nim">NIM / Username Admin</label>
+        <input type="text" id="login-nim" placeholder="Masukkan NIM (misal: 24020001)">
+      </div>
+      <div class="form-group">
+        <label for="login-pass">Password</label>
+        <input type="password" id="login-pass" placeholder="Masukkan password">
+      </div>
+      <button class="btn-primary" onclick="doLogin()">🔐 Masuk</button>
+      <div class="alert alert-error" id="login-alert"></div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="form-register" style="display:none">
+      <div class="warn-box" style="margin-bottom:16px">
+        ⚠️ NIM harus diawali dengan <strong>2402</strong>
+      </div>
+      <div class="form-group">
+        <label for="reg-nim">NIM Mahasiswa</label>
+        <input type="text" id="reg-nim" placeholder="Contoh: 24020001" maxlength="12">
+      </div>
+      <div class="form-group">
+        <label for="reg-name">Nama Lengkap</label>
+        <input type="text" id="reg-name" placeholder="Nama sesuai KTM">
+      </div>
+      <div class="form-group">
+        <label for="reg-pass">Password</label>
+        <input type="password" id="reg-pass" placeholder="Buat password Anda">
+      </div>
+      <button class="btn-primary" onclick="doRegister()">📝 Daftar Sekarang</button>
+      <div class="alert" id="reg-alert"></div>
+    </div>
+  </div>
+
+  <script>
+    // Matrix rain animation
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const cols = Math.floor(canvas.width / 16);
+    const drops = Array(cols).fill(1);
+    const chars = 'アイウエオカキクケコ0123456789ABCDEF<>{}[]';
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(8,12,16,0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ff88';
+      ctx.font = '14px JetBrains Mono, monospace';
+      drops.forEach((y, i) => {
+        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i * 16, y * 16);
+        if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      });
+    }
+    setInterval(drawMatrix, 50);
+    window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+    function switchTab(tab) {
+      document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    }
+
+    async function doLogin() {
+      const nim = document.getElementById('login-nim').value.trim();
+      const password = document.getElementById('login-pass').value;
+      const alert = document.getElementById('login-alert');
+      if (!nim || !password) { showAlert(alert, 'error', 'NIM dan password wajib diisi'); return; }
+      try {
+        const r = await fetch('/api/auth/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nim, password }) });
+        const d = await r.json();
+        if (d.success) { window.location.href = d.redirect; }
+        else showAlert(alert, 'error', d.error);
+      } catch { showAlert(alert, 'error', 'Gagal terhubung ke server'); }
+    }
+
+    async function doRegister() {
+      const nim = document.getElementById('reg-nim').value.trim();
+      const name = document.getElementById('reg-name').value.trim();
+      const password = document.getElementById('reg-pass').value;
+      const alert = document.getElementById('reg-alert');
+      if (!nim || !name || !password) { showAlert(alert, 'error', 'Semua field wajib diisi'); return; }
+      if (!nim.startsWith('2402')) { showAlert(alert, 'error', 'NIM harus diawali 2402'); return; }
+      try {
+        const r = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nim, name, password }) });
+        const d = await r.json();
+        if (d.success) { showAlert(alert, 'success', d.message); setTimeout(() => switchTab('login'), 1500); }
+        else showAlert(alert, 'error', d.error);
+      } catch { showAlert(alert, 'error', 'Gagal terhubung ke server'); }
+    }
+
+    function showAlert(el, type, msg) {
+      el.className = 'alert show alert-' + type;
+      el.textContent = msg;
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        if (document.getElementById('form-login').style.display !== 'none') doLogin();
+        else doRegister();
+      }
+    });
+  </script>
+</body>
+</html>

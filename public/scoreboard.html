@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoreboard — Poltek GT CTF Lab</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links">
+      <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      <a href="/tutorial.html" class="nav-link">Tutorial</a>
+      <a href="/scoreboard.html" class="nav-link active">Scoreboard</a>
+    </div>
+    <div class="nav-user">
+      <span class="user-badge" id="user-nim">...</span>
+      <button class="btn-logout" onclick="logout()">Keluar</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div style="margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <h1 style="font-size:1.5rem;margin-bottom:4px">🏆 Scoreboard</h1>
+        <p class="text-dim">Ranking mahasiswa berdasarkan total poin</p>
+      </div>
+      <div class="text-dim mono" id="last-update" style="font-size:0.8rem"></div>
+    </div>
+
+    <!-- Top 3 Podium -->
+    <div id="podium" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px"></div>
+
+    <!-- Full Table -->
+    <div class="table-wrap">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:600">Semua Peserta</span>
+        <span class="text-dim mono" style="font-size:0.85rem" id="total-count"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="scoreboard-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>NIM</th>
+              <th>Nama</th>
+              <th>Challenge Selesai</th>
+              <th>Total Poin</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboard-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let myNim = '';
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me) return location.href = '/';
+      myNim = me.user.nim || '';
+      document.getElementById('user-nim').textContent = me.user.nim || me.user.username;
+      loadScoreboard();
+    }
+
+    async function loadScoreboard() {
+      const data = await fetch('/api/scoreboard').then(r=>r.json());
+      document.getElementById('total-count').textContent = `${data.length} mahasiswa`;
+      document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
+
+      // Podium top 3
+      const podiumColors = [
+        {bg:'rgba(255,215,0,0.1)',border:'rgba(255,215,0,0.3)',color:'#ffd700',icon:'🥇',label:'1st'},
+        {bg:'rgba(192,192,192,0.1)',border:'rgba(192,192,192,0.3)',color:'#c0c0c0',icon:'🥈',label:'2nd'},
+        {bg:'rgba(205,127,50,0.1)',border:'rgba(205,127,50,0.3)',color:'#cd7f32',icon:'🥉',label:'3rd'}
+      ];
+      document.getElementById('podium').innerHTML = data.slice(0,3).map((s,i) => {
+        const c = podiumColors[i];
+        return `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:14px;padding:20px;text-align:center">
+          <div style="font-size:2rem">${c.icon}</div>
+          <div style="color:${c.color};font-weight:700;font-size:0.85rem;margin:6px 0">${c.label}</div>
+          <div style="font-weight:600;margin-bottom:4px">${s.name}</div>
+          <div class="nim-code" style="font-size:0.8rem;margin-bottom:8px">${s.nim}</div>
+          <div style="color:${c.color};font-size:1.3rem;font-weight:800;font-family:'JetBrains Mono',monospace">${s.total_points}</div>
+          <div class="text-dim" style="font-size:0.78rem">${s.solved_count}/6 solved</div>
+        </div>`;
+      }).join('');
+
+      // Full table
+      document.getElementById('scoreboard-body').innerHTML = data.map((s, i) => {
+        const isMe = s.nim === myNim;
+        const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+        const bar = Math.round(parseInt(s.total_points)/1200*100);
+        return `<tr${isMe?' style="background:rgba(0,255,136,0.05)"':''}>
+          <td><span class="rank-badge ${rankClass}">${i+1}</span></td>
+          <td><span class="nim-code">${s.nim}${isMe?' <span style="color:var(--green);font-size:0.75rem">(Kamu)</span>':''}</span></td>
+          <td style="font-weight:${isMe?'600':'400'}">${s.name}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;background:var(--bg3);border-radius:20px;height:6px;overflow:hidden">
+                <div style="width:${bar}%;height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:20px"></div>
+              </div>
+              <span class="text-dim mono" style="font-size:0.8rem;white-space:nowrap">${s.solved_count}/6</span>
+            </div>
+          </td>
+          <td><span class="points-big">${s.total_points}</span> <span class="text-dim" style="font-size:0.8rem">pts</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', {method:'POST'});
+      location.href = '/';
+    }
+
+    init();
+    setInterval(loadScoreboard, 30000); // auto refresh 30s
+  </script>
+</body>
+</html>

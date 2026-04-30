@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQLi #1 — Login Bypass</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand"><span>🛡️</span> CTF Lab</div>
+    <div class="nav-links"><a href="/dashboard.html" class="nav-link">← Dashboard</a></div>
+    <div class="nav-user"><span class="user-badge" id="user-nim">...</span></div>
+  </nav>
+  <div class="main-content">
+    <div class="challenge-page">
+      <div class="challenge-header">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <span class="badge-diff diff-easy">Easy</span>
+          <span class="challenge-category cat-sqli">SQLi · Challenge #1</span>
+          <span class="badge-points">⚡ 100 pts</span>
+        </div>
+        <h1>SQL Injection — Login Bypass</h1>
+        <p class="challenge-desc-full">Form login di bawah menggunakan query SQL yang rentan. Login sebagai <strong>admin</strong> tanpa mengetahui passwordnya! Flag akan muncul ketika kamu berhasil masuk sebagai admin.</p>
+        <details class="hint-box">
+          <summary>💡 Tampilkan Hint</summary>
+          <p>Query yang digunakan: <code>SELECT * FROM users WHERE username='INPUT' AND password='INPUT'</code><br><br>
+          Payload: Username = <code>admin'--</code> (password bebas)<br>
+          Tanda <code>--</code> adalah komentar SQL yang akan mengabaikan pengecekan password!</p>
+        </details>
+      </div>
+
+      <!-- Inline Vulnerable Login Form -->
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>🔓 Form Login Rentan</h3>
+        <div class="warn-box" style="margin-bottom:16px">⚠️ Form ini menggunakan query SQL yang TIDAK AMAN (tidak menggunakan parameterized query)</div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="sqli-username" class="flag-input" placeholder="Masukkan username..." style="width:100%">
+        </div>
+        <div class="form-group" style="margin-top:12px">
+          <label>Password</label>
+          <input type="password" id="sqli-password" class="flag-input" placeholder="Masukkan password..." style="width:100%">
+        </div>
+        <button class="btn-submit-flag" style="margin-top:14px;width:100%;padding:12px" onclick="tryLogin()">🔐 Login</button>
+        <div id="login-result" style="margin-top:12px"></div>
+      </div>
+
+      <div class="tutorial-card mb-4" style="background:var(--bg2)">
+        <h3>📋 Query yang Digunakan Server</h3>
+        <div class="code-block">
+          <span class="comment">// ❌ KODE RENTAN (di server):</span><br>
+          <span class="keyword">const</span> query = <span class="string">`SELECT * FROM ctf_users<br>
+          WHERE username='<span class="highlight">${'{username}'}</span>'<br>
+          AND password='<span class="highlight">${'{password}'}</span>'`</span>;<br><br>
+          <span class="comment">// Coba masukkan: username = admin'--</span><br>
+          <span class="comment">// Query menjadi:</span><br>
+          SELECT * FROM ctf_users WHERE username='<span class="safe">admin'--</span>' AND password='...'<br>
+          <span class="comment">// Bagian setelah -- diabaikan!</span>
+        </div>
+      </div>
+
+      <div class="flag-submit-card">
+        <h3>🚩 Submit Flag (muncul setelah login berhasil)</h3>
+        <div class="flag-input-wrap">
+          <input type="text" class="flag-input" id="flag-input" placeholder="CTF{...}">
+          <button class="btn-submit-flag" onclick="submitFlag()">Submit</button>
+        </div>
+        <div class="alert" id="flag-alert" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function init() {
+      const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+      if (!me || me.role !== 'student') return location.href = '/';
+      document.getElementById('user-nim').textContent = me.user.nim;
+    }
+    async function tryLogin() {
+      const username = document.getElementById('sqli-username').value;
+      const password = document.getElementById('sqli-password').value;
+      const result = document.getElementById('login-result');
+      result.innerHTML = '<span class="text-dim">Mencoba login...</span>';
+      const r = await fetch('/vuln/sqli-1/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+      const d = await r.json();
+      if (d.success) {
+        result.innerHTML = `<div class="success-box">✅ Login berhasil sebagai <strong>${d.username}</strong> (${d.role})<br>🚩 <strong>Flag: <span style="color:var(--green);font-family:monospace">${d.flag}</span></strong><br><small>Copy flag di atas dan submit!</small></div>`;
+        document.getElementById('flag-input').value = d.flag;
+      } else {
+        result.innerHTML = `<div class="alert-error" style="padding:10px;border-radius:6px;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3)">❌ ${d.message}</div>`;
+      }
+    }
+    async function submitFlag() {
+      const flag = document.getElementById('flag-input').value.trim();
+      const alertEl = document.getElementById('flag-alert');
+      if (!flag) return;
+      const r = await fetch('/api/challenges/submit', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:'sqli-1',flag})});
+      const d = await r.json();
+      alertEl.className = 'alert show ' + (d.success ? 'alert-success' : 'alert-error');
+      alertEl.textContent = d.success ? `🎉 ${d.message}` : `❌ ${d.error}`;
+      if (d.success) setTimeout(()=>location.href='/dashboard.html', 2000);
+    }
+    init();
+  </script>
+</body>
+</html>
