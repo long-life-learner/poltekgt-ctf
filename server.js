@@ -9,9 +9,18 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is not set!');
+  console.error('   Di Railway: tambahkan PostgreSQL plugin dan link ke service ini.');
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : 
+       process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10
 });
 
 app.use(express.json());
@@ -467,6 +476,34 @@ app.get('/admin*', (req, res) => {
 });
 
 // =================== START ===================
-initDB().then(() => {
+async function startServer() {
+  // Start HTTP server immediately
   app.listen(PORT, () => console.log(`🚀 CTF Server running on port ${PORT}`));
-}).catch(err => { console.error('DB init failed:', err); process.exit(1); });
+
+  if (!process.env.DATABASE_URL) {
+    console.error('⚠️  DATABASE_URL tidak ditemukan. Server jalan tapi DB tidak terhubung.');
+    console.error('   Set DATABASE_URL di Railway environment variables.');
+    return;
+  }
+
+  // Retry DB connection up to 5 times
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await initDB();
+      console.log('✅ Database terhubung dan siap!');
+      return;
+    } catch (err) {
+      retries--;
+      if (retries === 0) {
+        console.error('❌ Gagal konek database setelah 5 percobaan:', err.message);
+        console.error('   Pastikan PostgreSQL plugin sudah ditambahkan di Railway.');
+      } else {
+        console.log(`⏳ Mencoba koneksi DB lagi... (${retries} percobaan tersisa)`);
+        await new Promise(r => setTimeout(r, 3000));
+      }
+    }
+  }
+}
+
+startServer();
