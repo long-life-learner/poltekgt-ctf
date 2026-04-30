@@ -36,13 +36,9 @@
         <h3>🎯 Cara Mengerjakan</h3>
         <p>1. Klik <strong>"Buka Halaman Rentan"</strong> di atas (terbuka di tab baru)</p>
         <p>2. Di halaman tersebut, masukkan payload XSS ke dalam form pencarian</p>
-        <p>3. Jika berhasil, alert box akan menampilkan flag</p>
+        <p>3. Jika berhasil, flag akan dapat kamu baca dari halaman tersebut</p>
         <p>4. Copy flag dan submit di bawah ini</p>
-        <div class="code-block" style="margin-top:12px">
-          <span class="comment">// Payload yang bisa dicoba:</span><br>
-          &lt;script&gt;alert(1)&lt;/script&gt;<br>
-          &lt;img src=x onerror=alert(document.getElementById(<span class="string">'flag-secret'</span>).innerText)&gt;
-        </div>
+        <div class="info-box" style="margin-top:12px">💡 Pelajari materi XSS di halaman <a href="/tutorial.html" style="color:var(--cyan)">Tutorial</a> sebelum mencoba!</div>
       </div>
 
       <div class="flag-submit-card">

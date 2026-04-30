@@ -40,19 +40,7 @@
         <div id="login-result" style="margin-top:12px"></div>
       </div>
 
-      <div class="tutorial-card mb-4" style="background:var(--bg2)">
-        <h3>📋 Query yang Digunakan Server</h3>
-        <div class="code-block">
-          <span class="comment">// ❌ KODE RENTAN (di server):</span><br>
-          <span class="keyword">const</span> query = <span class="string">`SELECT * FROM ctf_users<br>
-          WHERE username='<span class="highlight">${'{username}'}</span>'<br>
-          AND password='<span class="highlight">${'{password}'}</span>'`</span>;<br><br>
-          <span class="comment">// Coba masukkan: username = admin'--</span><br>
-          <span class="comment">// Query menjadi:</span><br>
-          SELECT * FROM ctf_users WHERE username='<span class="safe">admin'--</span>' AND password='...'<br>
-          <span class="comment">// Bagian setelah -- diabaikan!</span>
-        </div>
-      </div>
+      <div class="info-box" style="margin-bottom:16px">💡 Pelajari materi SQL Injection di halaman <a href="/tutorial.html" style="color:var(--cyan)">Tutorial</a> sebelum mencoba!</div>
 
       <div class="flag-submit-card">
         <h3>🚩 Submit Flag (muncul setelah login berhasil)</h3>

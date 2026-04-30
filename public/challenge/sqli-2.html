@@ -36,16 +36,7 @@
         <div id="search-results"></div>
       </div>
 
-      <div class="tutorial-card mb-4" style="background:var(--bg2)">
-        <h3>📋 Panduan UNION SQLi</h3>
-        <div class="code-block">
-          <span class="comment">// Step 1: Cari jumlah kolom (coba dulu dengan normal)</span><br>
-          <span class="string">' UNION SELECT 1,2,3,4--</span><br><br>
-          <span class="comment">// Step 2: Ekstrak flag dari tabel ctf_secrets</span><br>
-          <span class="string">' UNION SELECT 1,secret_value,3,4 FROM ctf_secrets WHERE secret_name='flag_sqli2'--</span><br><br>
-          <span class="comment">// Perhatikan: kolom ke-2 (name) yang akan tampil di hasil pencarian</span>
-        </div>
-      </div>
+      <div class="info-box" style="margin-bottom:16px">💡 Pelajari materi UNION-based SQL Injection di halaman <a href="/tutorial.html" style="color:var(--cyan)">Tutorial</a> sebelum mencoba!</div>
 
       <div class="flag-submit-card">
         <h3>🚩 Submit Flag</h3>

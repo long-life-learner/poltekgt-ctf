@@ -28,7 +28,7 @@
         <h3>🔎 Endpoint Blind SQLi</h3>
         <p class="text-dim" style="margin-bottom:12px">Masukkan kondisi SQL (yang akan ditambahkan setelah WHERE clause):</p>
         <div style="display:flex;gap:10px;margin-bottom:12px">
-          <input type="text" id="blind-input" class="flag-input" placeholder="Contoh: 1=1 atau 1=2 atau SUBSTRING(secret_value,1,1)='C'" style="flex:1">
+          <input type="text" id="blind-input" class="flag-input" placeholder="Masukkan kondisi SQL..." style="flex:1">
           <button class="btn-submit-flag" onclick="doBlindCheck()">Cek</button>
         </div>
         <div id="blind-result" style="padding:16px;background:var(--bg3);border-radius:var(--radius);text-align:center;font-size:1.1rem;font-weight:600;color:var(--text-dim)">
@@ -36,25 +36,7 @@
         </div>
       </div>
 
-      <div class="tutorial-card mb-4" style="background:var(--bg2)">
-        <h3>🤖 Auto Extractor (Bonus Tool)</h3>
-        <p class="text-dim" style="margin-bottom:12px;font-size:0.875rem">Tool ini akan otomatis mengekstrak flag dengan mengirim banyak request. Klik untuk mulai:</p>
-        <button class="open-challenge-btn" onclick="autoExtract()" id="extract-btn">🚀 Mulai Auto Extract</button>
-        <div id="extract-log" style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-family:monospace;font-size:0.8rem;max-height:200px;overflow-y:auto;display:none"></div>
-        <div id="extracted-flag" style="margin-top:8px"></div>
-      </div>
-
-      <div class="tutorial-card mb-4" style="background:var(--bg2)">
-        <h3>📋 Query yang Digunakan</h3>
-        <div class="code-block">
-          <span class="comment">// Query server (rentan):</span><br>
-          SELECT secret_value FROM ctf_secrets<br>
-          WHERE secret_name='flag_sqli3'<br>
-          AND <span class="highlight">[INPUT_KAMU]</span><br><br>
-          <span class="comment">// Gunakan SUBSTRING untuk cek per karakter:</span><br>
-          SUBSTRING(secret_value, <span class="string">posisi</span>, 1) = '<span class="string">karakter</span>'
-        </div>
-      </div>
+      <div class="info-box" style="margin-bottom:16px">💡 Pelajari materi Blind SQL Injection di halaman <a href="/tutorial.html" style="color:var(--cyan)">Tutorial</a> sebelum mencoba!</div>
 
       <div class="flag-submit-card">
         <h3>🚩 Submit Flag</h3>

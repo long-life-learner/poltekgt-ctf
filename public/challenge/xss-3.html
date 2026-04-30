@@ -30,15 +30,9 @@
       <div class="tutorial-card mb-4" style="background:var(--bg2)">
         <h3>🎯 Cara Mengerjakan</h3>
         <p>1. Buka "Portal Nilai" (halaman rentan)</p>
-        <p>2. Server akan set cookie <code>secret_flag</code> yang berisi flag</p>
-        <p>3. Gunakan XSS di form pencarian untuk membaca cookie tersebut</p>
-        <p>4. Alert akan menampilkan semua cookie — cari nilai <code>secret_flag</code></p>
-        <div class="code-block" style="margin-top:12px">
-          <span class="comment">// Payload untuk membaca cookie:</span><br>
-          &lt;img src=x onerror=<span class="highlight">alert(document.cookie)</span>&gt;<br><br>
-          <span class="comment">// Output yang kamu cari:</span><br>
-          <span class="string">secret_flag=CTF{...}</span>
-        </div>
+        <p>2. Server akan menyimpan sebuah informasi rahasia di cookie browser kamu</p>
+        <p>3. Gunakan XSS di form pencarian untuk membaca isi cookie tersebut</p>
+        <p>4. Temukan flag dari nilai cookie yang tampil</p>
         <div class="warn-box" style="margin-top:12px">⚠️ Ingat: Cookie HttpOnly TIDAK bisa dibaca JS. Di sini cookie sengaja dibuat tanpa HttpOnly!</div>
       </div>
       <div class="flag-submit-card">

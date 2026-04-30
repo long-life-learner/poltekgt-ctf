@@ -32,12 +32,9 @@
         <p>1. Buka halaman Buku Tamu di tab baru</p>
         <p>2. Isi kolom <strong>Komentar</strong> dengan payload XSS</p>
         <p>3. Klik "Kirim Komentar" — payload akan tersimpan di database</p>
-        <p>4. Halaman akan reload dan payload kamu akan dieksekusi (karena tidak ada sanitasi!)</p>
-        <p>5. Alert box akan menampilkan flag tersembunyi</p>
-        <div class="code-block" style="margin-top:12px">
-          <span class="comment">// Payload untuk Stored XSS:</span><br>
-          &lt;img src=x onerror=<span class="highlight">alert(document.getElementById('flag-stored').innerText)</span>&gt;
-        </div>
+        <p>4. Halaman akan reload dan payload kamu akan dieksekusi</p>
+        <p>5. Temukan flag yang tersembunyi di halaman tersebut</p>
+        <div class="info-box" style="margin-top:12px">💡 Pelajari materi Stored XSS di halaman <a href="/tutorial.html" style="color:var(--cyan)">Tutorial</a> sebelum mencoba!</div>
       </div>
       <div class="flag-submit-card">
         <h3>🚩 Submit Flag</h3>
