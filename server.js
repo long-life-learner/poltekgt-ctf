@@ -38,8 +38,10 @@ app.use(session({
 }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });
-const requireAuth = (req, res, next) => req.session.user ? next() : res.status(401).json({ error: 'Unauthorized' });
+const requireAuth  = (req, res, next) => req.session.user  ? next() : res.status(401).json({ error: 'Unauthorized' });
 const requireAdmin = (req, res, next) => req.session.admin ? next() : res.status(401).json({ error: 'Forbidden' });
+// Accepts both logged-in students AND admins (used for shared endpoints like scoreboard)
+const requireAnyAuth = (req, res, next) => (req.session.user || req.session.admin) ? next() : res.status(401).json({ error: 'Unauthorized' });
 
 // =================== INIT DB ===================
 async function initDB() {
@@ -202,7 +204,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { nim, name, password } = req.body;
   if (!nim || !name || !password) return res.status(400).json({ error: 'Semua field wajib diisi' });
   if (!nim.startsWith('2402')) return res.status(400).json({ error: 'NIM tidak valid. NIM harus diawali 2402' });
-  if (nim.length < 8) return res.status(400).json({ error: 'NIM minimal 8 digit' });
+  if (nim.length < 7) return res.status(400).json({ error: 'NIM minimal 7 digit' });
   try {
     const hash = await bcrypt.hash(password, 10);
     await pool.query('INSERT INTO students (nim, name, password) VALUES ($1, $2, $3)', [nim, name, hash]);
@@ -271,7 +273,7 @@ app.post('/api/challenges/submit', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/scoreboard', requireAuth, async (req, res) => {
+app.get('/api/scoreboard', requireAnyAuth, async (req, res) => {
   const { rows } = await pool.query(`
     SELECT s.nim, s.name,
       COALESCE(SUM(ch.points),0) AS total_points,

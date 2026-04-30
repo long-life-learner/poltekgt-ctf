@@ -39,7 +39,7 @@
     <!-- Register Form -->
     <div id="form-register" style="display:none">
       <div class="warn-box" style="margin-bottom:16px">
-        ⚠️ NIM harus diawali dengan <strong>2402</strong>
+        ⚠️ NIM harus diawali dengan <strong>2402</strong> dan minimal <strong>7 digit</strong>
       </div>
       <div class="form-group">
         <label for="reg-nim">NIM Mahasiswa</label>
@@ -108,6 +108,7 @@
       const alert = document.getElementById('reg-alert');
       if (!nim || !name || !password) { showAlert(alert, 'error', 'Semua field wajib diisi'); return; }
       if (!nim.startsWith('2402')) { showAlert(alert, 'error', 'NIM harus diawali 2402'); return; }
+      if (nim.length < 7) { showAlert(alert, 'error', 'NIM minimal 7 digit'); return; }
       try {
         const r = await fetch('/api/auth/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nim, name, password }) });
         const d = await r.json();
